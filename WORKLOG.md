@@ -1,0 +1,25 @@
+# Worklog
+
+## 2026-09-22 21:46
+**Task:** User asked to review local opencode logs for a suspected agent-looping problem, then (separately) to add enforcement for it.
+**Decision:** All substantive work this session happened in a different repo (`~/Workspace/Git/Claude-Skills`), not here — investigated opencode's SQLite session DB and log files, traced a runaway `scar-coder` session to the `agent-supervisor` skill's `max_rereview_loops` cap being prompt-text-only (unenforced by code), then implemented and committed a hard enforcement gate there (commit `f52ce52`). See that repo's own WORKLOG.md/commit message for the actual reasoning.
+**Why:** This repo (T-Watch firmware) was just the shell's resting cwd for parts of the conversation; no files here were intentionally created or edited as part of the task.
+**Progress:** Nothing to check in here. The untracked files present (`plan.md`, `.pre-commit-config.yaml`, `.secrets.baseline`) predate this session or were auto-added by the global secret-management hook as a side effect of running Bash with this cwd — not part of this session's work, left as-is.
+
+## 2026-09-22 21:49
+**Task:** Rewrite plan.md; begin M0 (safety net) implementation.
+**Decision:** New codebase on LilyGoLib 0.2.1 + pioarduino; NanoClaw Watch (jorgenclaw/nanoclaw-watch) used as read-only reference (no LICENSE file, committed token, blocking UI, unsigned HTTP OTA). M1 split into M1a offline watch / M1b connected for faster first useful flash. Plan reviewed twice by Codex via agent-supervisor; round-2 fixes unreviewed (re-review cap hit).
+**Why:** Upstream offers build knowledge (pioarduino version, global USING_* flags, ffat partition) but no reusable framework. Flash-safety enforced in scripts so no agent can flash without a verified per-MAC backup.
+**Progress:** Done: backup-flash.sh, restore-flash.sh, lib/verify-backup.sh, usb-reset.sh, 19 BATS tests passing against a stub esptool, shellcheck clean, .gitignore (backups/, secrets.h). PlatformIO 6.2.0 installed via pipx. Blocked: watch USB unreachable (-71 while factory firmware idles); need download mode (BOOT+RST) to run the real factory backup. Not yet done: LICENSE, README, pre-commit, CI, factory example build.
+
+## 2026-09-22 22:00
+**Task:** M0 step 1 — factory flash backup.
+**Decision:** Backups taken in download mode with ESPTOOL_OPTS="--before no-reset --after no-reset" (new passthrough in scripts/lib/common.sh), since the factory firmware idles USB into -71 errors. Plan's partition table replaced with the one read from this watch's factory image (adds 64 KB coredump at 0xFF0000, ffat 0x7E0000) instead of NanoClaw's copy.
+**Why:** Download mode is the only reliable USB state; coredump partition is valuable for crash debugging and matches known-good vendor layout.
+**Progress:** Done: verified factory backup backups/68ee8f48228c/factory-20260923T020006Z.bin (sha256 ecf305cd…70fbb), two reads matched, 7m17s total. Watch left in download mode. Next: LICENSE/README/linters/CI scaffold, then build LilyGoLib examples/factory @V0.2.1.
+
+## 2026-09-22 22:22
+**Task:** M0 steps 2-3 — repo scaffold, vendor baseline build, flash.
+**Decision:** Baseline = vendor LilyGoLib-PlatformIO @097c1bd, cloned into gitignored .baseline/ (no license, so not vendored) with 3 scripted changes: default_envs=twatchs3, platform pioarduino 55.03.39 (Arduino 3.3.9/IDF 5.5.4), lib_ignore "ESP32 BLE Arduino". flash.sh now finishes with esptool watchdog-reset.
+**Why:** Vendor's espressif32@6.12.0 (Arduino 2.0.17/IDF 4.4) cannot compile LilyGoLib 0.2.1 (IDF5 LCD APIs); the registry BLE lib breaks on Arduino 3.x. Chose 55.03.39 over the 2-day-old 55.03.312 (already needed a hotfix). RTS reset over USB-JTAG left chip in download mode (DTR asserted); watchdog reset boots reliably.
+**Progress:** Done: LICENSE (Apache-2.0), README, install/uninstall/healthcheck.sh, CI (pre-commit + BATS), Dependabot, Trivy, 29 BATS tests, all pre-commit hooks green. Vendor factory firmware flashed and booting; I2C scan found BMA423/AXP2101/PCF8563/DRV2605/FT6336 — logged in docs/hardware-validation.md. Remaining M0: interactive peripheral checks on the watch (display/touch/audio/radio model etc.) — needs the user. Nothing committed yet.

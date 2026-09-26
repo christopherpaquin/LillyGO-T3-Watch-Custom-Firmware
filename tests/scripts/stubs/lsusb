@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Fake lsusb: reports the watch unless STUB_NO_USB is set.
+[[ -n "${STUB_NO_USB:-}" ]] || echo "Bus 001 Device 039: ID 303a:1001 Espressif USB JTAG/serial debug unit"

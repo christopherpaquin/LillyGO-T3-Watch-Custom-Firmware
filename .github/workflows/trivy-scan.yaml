@@ -1,0 +1,39 @@
+# Flip exit-code to 1 for a repo where you want it to actually gate merges.
+name: Trivy Scan
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  trivy:
+    name: Trivy (filesystem + config)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+      - name: Run Trivy (fs + config)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+          format: "sarif"
+          output: "trivy-results.sarif"
+      - name: Upload results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        # Code Scanning (SARIF upload) requires GitHub Advanced Security,
+        # which isn't available on a private repo under a personal plan -
+        # "Resource not accessible by integration" there is expected, not a
+        # real failure. Don't let it fail CI; Trivy's own findings already
+        # ran above regardless of whether this upload succeeds. Confirmed
+        # failing this way on a fresh private repo (claude-cli-as-a-service,
+        # 2026-08-18) before this continue-on-error was added.
+        continue-on-error: true
+        with:
+          sarif_file: "trivy-results.sarif"

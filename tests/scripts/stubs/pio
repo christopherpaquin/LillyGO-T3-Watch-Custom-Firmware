@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Fake PlatformIO for BATS tests: records its arguments in $PIO_LOG.
+echo "$*" >> "${PIO_LOG:?}"

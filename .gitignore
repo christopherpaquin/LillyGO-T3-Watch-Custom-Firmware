@@ -1,0 +1,16 @@
+# Full-flash images contain Wi-Fi credentials and device tokens.
+backups/
+
+# Local secrets
+include/secrets.h
+.env
+
+# PlatformIO
+.pio/
+.vscode/
+
+# Scratch
+*.log
+
+# Vendor baseline checkout
+.baseline/

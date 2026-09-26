@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Fake esptool for BATS tests. The "flash" is the file $STUB_FLASH.
+#   STUB_MAC            MAC reported by read-mac (default 68:ee:8f:48:22:8c)
+#   STUB_FLASH          file acting as the device flash (required for read/write)
+#   STUB_FAIL_READMAC   if set, read-mac fails
+#   STUB_FLAKY_READ     if set, every second read-flash returns altered data
+#   STUB_CORRUPT_WRITE  if set, write-flash stores altered data
+#   STUB_LOG            if set, each invocation's args are appended here
+
+[[ -n "${STUB_LOG:-}" ]] && echo "$*" >> "${STUB_LOG}"
+
+args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --port | -p | --before | --after)
+      shift 2
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+case "${args[0]:-}" in
+  read-mac)
+    [[ -z "${STUB_FAIL_READMAC:-}" ]] || {
+      echo "OSError: [Errno 71] Protocol error"
+      exit 1
+    }
+    echo "esptool v5.3.1"
+    echo "MAC: ${STUB_MAC:-68:ee:8f:48:22:8c}"
+    ;;
+  read-flash)
+    size="${args[2]}"
+    out="${args[3]}"
+    head -c "${size}" "${STUB_FLASH}" > "${out}"
+    if [[ -n "${STUB_FLAKY_READ:-}" ]]; then
+      counter="${STUB_FLASH}.reads"
+      n=$(($(cat "${counter}" 2> /dev/null || echo 0) + 1))
+      echo "${n}" > "${counter}"
+      if ((n % 2 == 0)); then
+        printf 'X' | dd of="${out}" bs=1 seek=0 conv=notrunc status=none
+      fi
+    fi
+    ;;
+  write-flash)
+    cp "${args[2]}" "${STUB_FLASH}"
+    if [[ -n "${STUB_CORRUPT_WRITE:-}" ]]; then
+      printf 'X' | dd of="${STUB_FLASH}" bs=1 seek=0 conv=notrunc status=none
+    fi
+    ;;
+  version)
+    echo "esptool v5.3.1 (stub)"
+    ;;
+  *)
+    echo "stub esptool: unsupported: ${args[*]}" >&2
+    exit 2
+    ;;
+esac
