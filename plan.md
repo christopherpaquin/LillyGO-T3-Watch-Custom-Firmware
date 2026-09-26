@@ -550,7 +550,7 @@ result, tests run, hardware tests still needed, known limitations, next step.
 
 ## Open Questions
 
-1. Which LoRa radio is fitted? (M0)
+1. ~~Which LoRa radio is fitted?~~ — **resolved 2026-09-26: SX1262** (radio init passed its chip-ID check with the vendor default flag; see `docs/hardware-validation.md`)
 2. Where will the real homelab backend run, and does it adapt the existing lab
    dashboard API or query Zabbix/LibreNMS directly? (before M2 step 7)
 3. Does the NanoClaw author add a LICENSE file? (affects D3 only)

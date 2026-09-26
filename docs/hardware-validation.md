@@ -41,22 +41,22 @@ Start done. run main loop
 | BMA423 IMU (I2C) | PASS | I2C scan `0x19` |
 | DRV2605 haptics (I2C) | PASS | I2C scan `0x5A` |
 | FT6336U touch (I2C) | PASS | I2C scan `0x38` |
-| Display | NOT TESTED | factory UI visible, readable, backlight changes with brightness |
-| Touch input | NOT TESTED | tap and swipe through factory menus, corners included |
-| Side button (PMIC key) | NOT TESTED | short press turns screen off/on |
-| Battery reading | NOT TESTED | factory power screen shows a sane voltage/percentage |
-| Charging detection | NOT TESTED | power screen shows charging when USB is plugged in, not charging when unplugged |
-| RTC keeps time | NOT TESTED | set the time, power-cycle, time still correct |
-| IMU motion | NOT TESTED | factory sensor screen values change when the watch moves |
-| Haptics | NOT TESTED | vibration is felt (factory vibrate test / tap feedback) |
-| Speaker | NOT TESTED | factory audio/music screen plays a sound |
-| Microphone | NOT TESTED | factory microphone screen shows level changes when speaking |
-| Wi-Fi | NOT TESTED | factory wireless screen scans and lists networks |
-| BLE | NOT TESTED | factory BLE screen advertises / is visible from a phone |
-| GPS | NOT TESTED | factory GPS screen detects the module (fix needs outdoors) |
-| LoRa radio | NOT TESTED | factory radio screen initializes; **record the chip model it shows** |
-| IR transmitter | NOT TESTED | factory IR remote screen sends; check with a phone camera |
-| Light sleep / wake | NOT TESTED | screen times out and wakes on button and touch |
+| Display | PASS | 2026-09-26: factory UI visible, readable; brightness setting visibly changes backlight |
+| Touch input | PASS | 2026-09-26: swipes, tap-select, and corner/edge taps all respond |
+| Side button (PMIC key) | PASS | 2026-09-26: short press turns screen off; next press brings it back on |
+| Battery reading | PASS | 2026-09-26: factory power screen shows a sane percentage (87%) |
+| Charging detection | NOT TESTED | factory UI exposes no live charge state (verified 2026-09-26, plugged and unplugged); however battery % rose 87% → 100% during the session, so the AXP2101 is almost certainly charging — will be confirmed definitively in M1a by reading the AXP2101 charge state directly via LilyGoLib |
+| RTC keeps time | PASS | 2026-09-26: time/date set on factory UI, power-cycled, still correct on wake |
+| IMU motion | FAIL | 2026-09-26: chip responds to I2C scan at `0x19` (standard BMA423 addr) but factory sensor screen shows a static red dot (no live values) and settings reports the accelerometer **offline** — chip-ID handshake is failing; investigate LilyGoLib BMA423 init (bus/address/chip-ID read) in the M1a IMU platform layer. Step count (M1b) and wake-on-raise (M1a) depend on this. |
+| Haptics | PASS | 2026-09-26: vibration felt on power-on (factory build has no dedicated vibrate-test menu) |
+| Speaker | PASS | 2026-09-26: factory audio screen plays the FFAT sound files; no volume control in factory UI (PCM amp gain is software-settable, so M1a audio layer can add it) |
+| Microphone | PASS | 2026-09-26: factory mic screen level meter tracks speech (moves while speaking, flat when quiet) |
+| Wi-Fi | PASS | 2026-09-26: factory wireless screen scans and lists nearby networks (factory keyboard too small for password entry without a stylus; M1b connects via `secrets.h` credentials so no on-device typing is needed) |
+| BLE | NOT TESTED | factory build exposes no BLE screen/settings entry (verified 2026-09-26); will be validated in M1b by the NimBLE-Arduino platform wrapper (visible-from-phone check) |
+| GPS | PASS | 2026-09-26: factory GPS screen shows module connected and a live satellite count (fix needs outdoors; full position validation comes with the P3 GPS feature) |
+| LoRa radio | PASS | 2026-09-26: factory radio screen shows the full radio menu (not "Radio module not detected!"); firmware built with the vendor default `ARDUINO_LILYGO_LORA_SX1262` flag and RadioLib's `radio.begin()` performs a chip-ID check at init, so the fitted chip is an **SX1262** (open question #1 resolved; no radio re-pin needed). Radio defaults to disabled; no TX test performed. |
+| IR transmitter | PASS | 2026-09-26: IR LED visibly activates when a test command is sent from the factory IR remote screen |
+| Light sleep / wake | PASS | 2026-09-26: screen times out at the 60 s setting; big right-side button wakes; touch on the dark screen wakes |
 
 ## Notes
 
@@ -66,6 +66,4 @@ Start done. run main loop
   boots the app; `scripts/flash.sh` now does this after every upload.
 - Opening the serial port can itself reset the chip. The port may come back
   as `/dev/ttyACM1` if something held `ttyACM0` open during re-enumeration.
-- The LoRa build flag is the vendor default (`ARDUINO_LILYGO_LORA_SX1262`).
-  If this watch has a different radio, the radio screen will fail to init.
-  That shows the fitted chip isn't an SX1262, not that the hardware is broken.
+- The LoRa build flag is the vendor default (`ARDUINO_LILYGO_LORA_SX1262`). **Confirmed correct 2026-09-26:** radio init passed its chip-ID check with that flag, so this watch has an SX1262.
